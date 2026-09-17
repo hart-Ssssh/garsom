@@ -1,19 +1,37 @@
-// Dados simulados do Cardápio
-const cardapio = [
-    { id: 1, nome: "X-Tudo Artesanal", preco: 35.90, img: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400", complementos: ["Sem Salada", "Extra Bacon", "Pão Brioche", "Pão Australiano"] },
-    { id: 2, nome: "Pizza Calabresa", preco: 45.00, img: "https://images.unsplash.com/photo-1604382355076-af4b0eb60143?w=400", complementos: ["Borda Recheada", "Sem Cebola", "Massa Fina"] },
-    { id: 3, nome: "Coca-Cola 600ml", preco: 8.50, img: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400", complementos: ["Com Gelo", "Com Limão"] }
-];
+// ATENÇÃO: Substitua pela URL base do seu Worker Cloudflare
+const API_URL = "https://codecream.larissagazoli45.workers.dev/";
 
-// Estado do App
-let pedidosGerais = [];
+let cardapio = [];
 let mesaAtual = null;
 let carrinhoAtual = [];
 let itemEmFoco = null;
 let qtdEmFoco = 1;
-let complementosSelecionados = [];
 
-// Navegação entre telas
+// Inicialização
+async function iniciar() {
+    await carregarProdutos();
+    await renderizarPedidosPendentes();
+}
+
+// Carrega os dados direto da tb_cardapio do backend
+async function carregarProdutos() {
+    try {
+        const response = await fetch(`${API_URL}/produtos`);
+        const produtosBD = await response.json();
+        
+        // Mapeando dados do DB para o front (ignorando o preço)
+        cardapio = produtosBD.map(p => {
+            return {
+                id: p.id_cardapio,
+                nome: p.nome_produto,
+                img: p.imagem || 'https://via.placeholder.com/150'
+            };
+        });
+    } catch (e) {
+        console.error("Erro ao buscar cardápio:", e);
+    }
+}
+
 function mostrarTela(idTela) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(idTela).classList.add('active');
@@ -21,7 +39,7 @@ function mostrarTela(idTela) {
 }
 function voltarPara(idTela) { mostrarTela(idTela); }
 
-// INÍCIO: Modal da Mesa
+// --- FLUXO DA MESA ---
 document.getElementById('btn-novo-pedido').addEventListener('click', () => {
     document.getElementById('modal-mesa').classList.add('active');
     document.getElementById('input-mesa').value = '';
@@ -44,7 +62,7 @@ document.getElementById('btn-iniciar-pedido').addEventListener('click', () => {
     mostrarTela('tela-catalogo');
 });
 
-// CATÁLOGO: Renderizar e Buscar
+// --- FLUXO DO CATÁLOGO ---
 function renderizarCatalogo(produtos) {
     const grid = document.getElementById('grid-produtos');
     grid.innerHTML = '';
@@ -54,7 +72,6 @@ function renderizarCatalogo(produtos) {
                 <img src="${prod.img}" alt="${prod.nome}">
                 <div class="info">
                     <h4>${prod.nome}</h4>
-                    <span class="price">R$ ${prod.preco.toFixed(2).replace('.', ',')}</span>
                 </div>
             </div>
         `;
@@ -67,11 +84,10 @@ document.getElementById('busca-comida').addEventListener('input', (e) => {
     renderizarCatalogo(filtrados);
 });
 
-// DETALHES: Abrir e configurar produto (Estilo Shein)
+// --- FLUXO DETALHES DO PRODUTO ---
 function abrirDetalhes(id) {
     itemEmFoco = cardapio.find(p => p.id === id);
     qtdEmFoco = 1;
-    complementosSelecionados = [];
     
     document.getElementById('item-qtd').innerText = qtdEmFoco;
     document.getElementById('item-obs').value = '';
@@ -81,14 +97,8 @@ function abrirDetalhes(id) {
         <img src="${itemEmFoco.img}" class="item-hero-img">
         <div class="container details-container">
             <h2>${itemEmFoco.nome}</h2>
-            <span class="price">R$ ${itemEmFoco.preco.toFixed(2).replace('.', ',')}</span>
         </div>
     `;
-
-    const tagsContainer = document.getElementById('tags-complementos');
-    tagsContainer.innerHTML = itemEmFoco.complementos.map(comp => 
-        `<div class="tag" onclick="toggleTag(this, '${comp}')">${comp}</div>`
-    ).join('');
 
     mostrarTela('tela-detalhes');
 }
@@ -100,24 +110,13 @@ function alterarQtd(valor) {
     }
 }
 
-function toggleTag(elemento, complemento) {
-    elemento.classList.toggle('selected');
-    if (complementosSelecionados.includes(complemento)) {
-        complementosSelecionados = complementosSelecionados.filter(c => c !== complemento);
-    } else {
-        complementosSelecionados.push(complemento);
-    }
-}
-
-// ADICIONAR AO CARRINHO
 document.getElementById('btn-add-carrinho').addEventListener('click', () => {
     const obs = document.getElementById('item-obs').value;
     carrinhoAtual.push({
-        produto: itemEmFoco,
+        id_produto: itemEmFoco.id,
+        nome: itemEmFoco.nome,
         quantidade: qtdEmFoco,
-        complementos: [...complementosSelecionados],
-        observacao: obs,
-        subtotal: itemEmFoco.preco * qtdEmFoco
+        observacao: obs
     });
     
     atualizarBadgeCarrinho();
@@ -128,87 +127,113 @@ function atualizarBadgeCarrinho() {
     document.getElementById('cart-count').innerText = carrinhoAtual.length;
 }
 
-// CARRINHO E FINALIZAÇÃO
+// --- CARRINHO E CONFIRMAÇÃO ---
 document.getElementById('btn-ver-carrinho').addEventListener('click', renderizarCarrinho);
 
 function renderizarCarrinho() {
     const lista = document.getElementById('lista-carrinho');
     lista.innerHTML = '';
-    let total = 0;
 
-    carrinhoAtual.forEach((item, index) => {
-        total += item.subtotal;
+    carrinhoAtual.forEach(item => {
         lista.innerHTML += `
             <li class="cart-item">
                 <div class="cart-item-header">
-                    <span>${item.quantidade}x ${item.produto.nome}</span>
-                    <span>R$ ${item.subtotal.toFixed(2).replace('.', ',')}</span>
+                    <span>${item.quantidade}x ${item.nome}</span>
                 </div>
                 <div class="cart-item-details">
-                    ${item.complementos.length ? `<strong>Tags:</strong> ${item.complementos.join(', ')}<br>` : ''}
                     ${item.observacao ? `<strong>Obs:</strong> ${item.observacao}` : ''}
                 </div>
             </li>
         `;
     });
 
-    document.getElementById('carrinho-total').innerText = `R$ ${total.toFixed(2).replace('.', ',')}`;
     mostrarTela('tela-carrinho');
 }
 
-document.getElementById('btn-enviar-pedido').addEventListener('click', () => {
-    if (carrinhoAtual.length === 0) return alert('O carrinho está vazio!');
+document.getElementById('btn-enviar-pedido').addEventListener('click', async () => {
+    if (carrinhoAtual.length === 0) return alert('A lista está vazia!');
     
-    // Adiciona ao array global de pedidos
-    pedidosGerais.push({
-        id: Date.now(),
-        mesa: mesaAtual,
-        itens: [...carrinhoAtual],
-        total: carrinhoAtual.reduce((acc, item) => acc + item.subtotal, 0),
-        status: 'pendente'
-    });
-    
-    renderizarPedidosPendentes();
-    mostrarTela('tela-inicial');
+    const btn = document.getElementById('btn-enviar-pedido');
+    btn.innerText = "Enviando...";
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(`${API_URL}/pedidos/garcom`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mesa: mesaAtual,
+                itens: carrinhoAtual
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.sucesso) {
+            alert('Pedido enviado à cozinha!');
+            await renderizarPedidosPendentes();
+            mostrarTela('tela-inicial');
+        } else {
+            alert('Erro ao enviar pedido.');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Erro de conexão ao enviar o pedido.');
+    } finally {
+        btn.innerText = "Enviar para Cozinha";
+        btn.disabled = false;
+    }
 });
 
-// TELA INICIAL: Gerenciar Pendentes
-function renderizarPedidosPendentes() {
+// --- LISTAGEM DE PEDIDOS PENDENTES DA COZINHA (DB_IC) ---
+async function renderizarPedidosPendentes() {
     const lista = document.getElementById('lista-pedidos');
-    lista.innerHTML = '';
+    lista.innerHTML = '<p style="text-align:center;">Carregando pedidos...</p>';
     
-    // Filtra apenas os pendentes (se mudar para preparo, some da tela)
-    const pendentes = pedidosGerais.filter(p => p.status === 'pendente');
-    
-    if (pendentes.length === 0) {
-        lista.innerHTML = '<p style="color:#777; text-align:center; padding: 20px 0;">Nenhum pedido pendente no momento.</p>';
-        return;
-    }
+    try {
+        // Puxa as ordens em aberto na tabela orders do DB_IC
+        const response = await fetch(`${API_URL}/orders`);
+        const pendentes = await response.json();
+        
+        lista.innerHTML = '';
+        if (pendentes.length === 0) {
+            lista.innerHTML = '<p style="color:#777; text-align:center; padding: 20px 0;">Nenhum pedido pendente na cozinha.</p>';
+            return;
+        }
 
-    pendentes.forEach(pedido => {
-        lista.innerHTML += `
-            <li class="order-item">
-                <div class="order-header">
-                    <span>Mesa ${pedido.mesa}</span>
-                    <span class="badge-status">Pendente</span>
-                </div>
-                <p>Total: R$ ${pedido.total.toFixed(2).replace('.', ',')}</p>
-                <div style="margin-top: 10px; display: flex; gap: 10px;">
-                    <button class="btn-secondary" style="padding: 8px; font-size: 0.9rem;" onclick="simularCozinha(${pedido.id})">Aprovar na Cozinha</button>
-                </div>
-            </li>
-        `;
-    });
+        pendentes.forEach(pedido => {
+            lista.innerHTML += `
+                <li class="order-item">
+                    <div class="order-header">
+                        <span>Mesa ${pedido.table_number}</span>
+                        <span class="badge-status">Pendente</span>
+                    </div>
+                    <div class="cart-item-details" style="margin: 10px 0;">
+                        ${pedido.items.split(' | ').join('<br>')}
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <button class="btn-secondary block" style="padding: 8px; font-size: 0.9rem;" onclick="simularCozinha(${pedido.id})">Simular: Cozinha deu Baixa</button>
+                    </div>
+                </li>
+            `;
+        });
+    } catch (e) {
+        lista.innerHTML = '<p style="color:red; text-align:center;">Erro ao carregar pedidos da cozinha.</p>';
+    }
 }
 
-// Função simulando a cozinha dando "OK"
-function simularCozinha(idPedido) {
-    const pedido = pedidosGerais.find(p => p.id === idPedido);
-    if (pedido) {
-        pedido.status = 'em preparo';
-        renderizarPedidosPendentes(); // Re-renderiza a lista, o que fará o item sumir da tela do garçom
+// Simula a Cozinha atualizando o status do DB_IC para 'COMPLETED'
+async function simularCozinha(idOrderDB_IC) {
+    try {
+        await fetch(`${API_URL}/orders/complete/${idOrderDB_IC}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        await renderizarPedidosPendentes();
+    } catch (e) {
+        alert("Erro ao atualizar o pedido na cozinha.");
     }
 }
 
-// Inicialização
-renderizarPedidosPendentes();
+// Chamada inicial
+iniciar();

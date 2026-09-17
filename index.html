@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Garsom</title>
+    <title>App do Garçom</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -15,9 +15,9 @@
             </header>
             <div class="container">
                 <button id="btn-novo-pedido" class="btn-primary block">Novo Pedido</button>
-                <h2 class="section-title">Pedidos Pendentes</h2>
+                <h2 class="section-title mt-4">Pedidos Pendentes (Cozinha)</h2>
                 <ul id="lista-pedidos" class="order-list">
-                    <!-- Pedidos pendentes renderizados aqui -->
+                    <!-- Pedidos pendentes do DB_IC renderizados aqui -->
                 </ul>
             </div>
         </section>
@@ -42,7 +42,7 @@
             </header>
             <div class="container">
                 <div id="grid-produtos" class="grid-shopee">
-                    <!-- Produtos renderizados aqui -->
+                    <!-- Produtos do DB_CODECREAM renderizados aqui -->
                 </div>
             </div>
             <button class="btn-floating-back" onclick="voltarPara('tela-inicial')">Voltar</button>
@@ -50,9 +50,7 @@
 
         <!-- TELA 3: DETALHES DO ITEM -->
         <section id="tela-detalhes" class="screen">
-            <div id="detalhes-conteudo">
-                <!-- Imagem, título e preço injetados via JS -->
-            </div>
+            <div id="detalhes-conteudo"></div>
             <div class="container details-container">
                 <div class="shein-quantity">
                     <span>Quantidade</span>
@@ -63,38 +61,29 @@
                     </div>
                 </div>
 
-                <h3>Complementos</h3>
-                <div id="tags-complementos" class="tags-container">
-                    <!-- Tags renderizadas aqui -->
-                </div>
-
-                <h3>Observações</h3>
-                <textarea id="item-obs" placeholder="Ex: Tirar cebola, carne bem passada..."></textarea>
+                <h3>Observações Específicas</h3>
+                <textarea id="item-obs" placeholder="Ex: Sem cebola, carne bem passada..."></textarea>
 
                 <div class="fixed-bottom">
-                    <button id="btn-add-carrinho" class="btn-primary block">Adicionar ao Pedido</button>
+                    <button id="btn-add-carrinho" class="btn-primary block">Adicionar à Lista</button>
                     <button class="btn-secondary block mt-2" onclick="voltarPara('tela-catalogo')">Cancelar</button>
                 </div>
             </div>
         </section>
 
-        <!-- TELA 4: CARRINHO -->
+        <!-- TELA 4: CARRINHO (LISTA DE CONFIRMAÇÃO) -->
         <section id="tela-carrinho" class="screen">
             <header class="top-bar">
-                <h1>Resumo do Pedido</h1>
+                <h1>Confirmação do Pedido</h1>
                 <span id="carrinho-mesa" class="mesa-badge">Mesa --</span>
             </header>
             <div class="container">
                 <ul id="lista-carrinho" class="cart-list">
-                    <!-- Itens do carrinho aqui -->
+                    <!-- Itens listados aqui sem preço -->
                 </ul>
-                <div class="total-box">
-                    <span>Total:</span>
-                    <span id="carrinho-total">R$ 0,00</span>
-                </div>
                 <div class="fixed-bottom">
                     <button id="btn-enviar-pedido" class="btn-primary block">Enviar para Cozinha</button>
-                    <button class="btn-secondary block mt-2" onclick="voltarPara('tela-catalogo')">Voltar ao Cardápio</button>
+                    <button class="btn-secondary block mt-2" onclick="voltarPara('tela-catalogo')">Continuar Adicionando</button>
                 </div>
             </div>
         </section>
