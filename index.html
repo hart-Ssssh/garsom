@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garsom</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- TELA 1: INICIAL -->
+        <section id="tela-inicial" class="screen active">
+            <header class="top-bar">
+                <h1>Painel de Pedidos</h1>
+            </header>
+            <div class="container">
+                <button id="btn-novo-pedido" class="btn-primary block">Novo Pedido</button>
+                <h2 class="section-title">Pedidos Pendentes</h2>
+                <ul id="lista-pedidos" class="order-list">
+                    <!-- Pedidos pendentes renderizados aqui -->
+                </ul>
+            </div>
+        </section>
+
+        <!-- MODAL: NÚMERO DA MESA -->
+        <div id="modal-mesa" class="modal">
+            <div class="modal-content">
+                <h3>Informar Mesa</h3>
+                <input type="number" id="input-mesa" placeholder="Nº da Mesa" min="1">
+                <div class="modal-actions">
+                    <button id="btn-cancelar-mesa" class="btn-secondary">Cancelar</button>
+                    <button id="btn-iniciar-pedido" class="btn-primary">Iniciar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA 2: CATÁLOGO -->
+        <section id="tela-catalogo" class="screen">
+            <header class="top-bar search-bar">
+                <input type="text" id="busca-comida" placeholder="Buscar no cardápio...">
+                <button id="btn-ver-carrinho" class="cart-badge">🛒 <span id="cart-count">0</span></button>
+            </header>
+            <div class="container">
+                <div id="grid-produtos" class="grid-shopee">
+                    <!-- Produtos renderizados aqui -->
+                </div>
+            </div>
+            <button class="btn-floating-back" onclick="voltarPara('tela-inicial')">Voltar</button>
+        </section>
+
+        <!-- TELA 3: DETALHES DO ITEM -->
+        <section id="tela-detalhes" class="screen">
+            <div id="detalhes-conteudo">
+                <!-- Imagem, título e preço injetados via JS -->
+            </div>
+            <div class="container details-container">
+                <div class="shein-quantity">
+                    <span>Quantidade</span>
+                    <div class="qty-controls">
+                        <button onclick="alterarQtd(-1)">-</button>
+                        <span id="item-qtd">1</span>
+                        <button onclick="alterarQtd(1)">+</button>
+                    </div>
+                </div>
+
+                <h3>Complementos</h3>
+                <div id="tags-complementos" class="tags-container">
+                    <!-- Tags renderizadas aqui -->
+                </div>
+
+                <h3>Observações</h3>
+                <textarea id="item-obs" placeholder="Ex: Tirar cebola, carne bem passada..."></textarea>
+
+                <div class="fixed-bottom">
+                    <button id="btn-add-carrinho" class="btn-primary block">Adicionar ao Pedido</button>
+                    <button class="btn-secondary block mt-2" onclick="voltarPara('tela-catalogo')">Cancelar</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TELA 4: CARRINHO -->
+        <section id="tela-carrinho" class="screen">
+            <header class="top-bar">
+                <h1>Resumo do Pedido</h1>
+                <span id="carrinho-mesa" class="mesa-badge">Mesa --</span>
+            </header>
+            <div class="container">
+                <ul id="lista-carrinho" class="cart-list">
+                    <!-- Itens do carrinho aqui -->
+                </ul>
+                <div class="total-box">
+                    <span>Total:</span>
+                    <span id="carrinho-total">R$ 0,00</span>
+                </div>
+                <div class="fixed-bottom">
+                    <button id="btn-enviar-pedido" class="btn-primary block">Enviar para Cozinha</button>
+                    <button class="btn-secondary block mt-2" onclick="voltarPara('tela-catalogo')">Voltar ao Cardápio</button>
+                </div>
+            </div>
+        </section>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
