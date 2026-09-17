@@ -1,5 +1,5 @@
 // Substitua pela URL real do seu Worker
-const API_URL = "https://codecream.larissagazoli45.workers.dev/"; 
+const API_URL = "https://codecream.larissagazoli45.workers.dev"; 
 
 let cardapio = [];
 let mesaAtual = null;
