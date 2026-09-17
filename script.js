@@ -1,5 +1,5 @@
-// ATENÇÃO: Substitua pela URL base do seu Worker Cloudflare
-const API_URL = "https://codecream.larissagazoli45.workers.dev/";
+// Substitua pela URL real do seu Worker
+const API_URL = "https://codecream.larissagazoli45.workers.dev/"; 
 
 let cardapio = [];
 let mesaAtual = null;
@@ -7,24 +7,27 @@ let carrinhoAtual = [];
 let itemEmFoco = null;
 let qtdEmFoco = 1;
 
-// Inicialização
 async function iniciar() {
     await carregarProdutos();
     await renderizarPedidosPendentes();
 }
 
-// Carrega os dados direto da tb_cardapio do backend
+// 1. PUXA NOME, FOTO E QUANTIDADE (ESTOQUE) DA API
 async function carregarProdutos() {
     try {
         const response = await fetch(`${API_URL}/produtos`);
-        const produtosBD = await response.json();
+        if (!response.ok) throw new Error("Falha na rede: " + response.status);
         
-        // Mapeando dados do DB para o front (ignorando o preço)
+        const data = await response.json();
+        const produtosBD = Array.isArray(data) ? data : (data.results || []);
+        
+        // Mapeando dados do DB para o front
         cardapio = produtosBD.map(p => {
             return {
                 id: p.id_cardapio,
-                nome: p.nome_produto,
-                img: p.imagem || 'https://via.placeholder.com/150'
+                nome: p.nome_produto || 'Sem nome',
+                img: p.imagem || 'https://via.placeholder.com/150',
+                estoque: parseFloat(p.quantidade) || 0 // Capturando a quantidade disponível
             };
         });
     } catch (e) {
@@ -49,7 +52,7 @@ document.getElementById('btn-cancelar-mesa').addEventListener('click', () => {
     document.getElementById('modal-mesa').classList.remove('active');
 });
 
-document.getElementById('btn-iniciar-pedido').addEventListener('click', () => {
+document.getElementById('btn-iniciar-pedido').addEventListener('click', async () => {
     const mesa = document.getElementById('input-mesa').value;
     if (!mesa) return alert("Informe o número da mesa!");
     
@@ -58,20 +61,34 @@ document.getElementById('btn-iniciar-pedido').addEventListener('click', () => {
     document.getElementById('carrinho-mesa').innerText = `Mesa ${mesa}`;
     document.getElementById('modal-mesa').classList.remove('active');
     atualizarBadgeCarrinho();
+    
+    if (cardapio.length === 0) {
+        document.getElementById('grid-produtos').innerHTML = '<p style="text-align:center;width:100%">Carregando cardápio...</p>';
+        mostrarTela('tela-catalogo');
+        await carregarProdutos(); 
+    }
+    
     renderizarCatalogo(cardapio);
     mostrarTela('tela-catalogo');
 });
 
-// --- FLUXO DO CATÁLOGO ---
+// --- FLUXO DO CATÁLOGO (Mostrando a Quantidade) ---
 function renderizarCatalogo(produtos) {
     const grid = document.getElementById('grid-produtos');
     grid.innerHTML = '';
+    
+    if(produtos.length === 0) {
+        grid.innerHTML = '<p style="text-align:center;width:100%">Nenhum produto encontrado no banco de dados.</p>';
+        return;
+    }
+
     produtos.forEach(prod => {
         grid.innerHTML += `
             <div class="product-card" onclick="abrirDetalhes(${prod.id})">
                 <img src="${prod.img}" alt="${prod.nome}">
                 <div class="info">
                     <h4>${prod.nome}</h4>
+                    <small style="color: #666; font-size: 0.8rem;">Em estoque: ${prod.estoque}</small>
                 </div>
             </div>
         `;
@@ -80,11 +97,11 @@ function renderizarCatalogo(produtos) {
 
 document.getElementById('busca-comida').addEventListener('input', (e) => {
     const termo = e.target.value.toLowerCase();
-    const filtrados = cardapio.filter(p => p.nome.toLowerCase().includes(termo));
+    const filtrados = cardapio.filter(p => (p.nome || '').toLowerCase().includes(termo));
     renderizarCatalogo(filtrados);
 });
 
-// --- FLUXO DETALHES DO PRODUTO ---
+// --- FLUXO DETALHES DO PRODUTO (Limitando a Quantidade) ---
 function abrirDetalhes(id) {
     itemEmFoco = cardapio.find(p => p.id === id);
     qtdEmFoco = 1;
@@ -97,6 +114,7 @@ function abrirDetalhes(id) {
         <img src="${itemEmFoco.img}" class="item-hero-img">
         <div class="container details-container">
             <h2>${itemEmFoco.nome}</h2>
+            <p style="color: #555; margin-bottom: 10px;">Estoque atual: ${itemEmFoco.estoque} unidades</p>
         </div>
     `;
 
@@ -104,13 +122,22 @@ function abrirDetalhes(id) {
 }
 
 function alterarQtd(valor) {
-    if (qtdEmFoco + valor > 0) {
-        qtdEmFoco += valor;
+    const novoValor = qtdEmFoco + valor;
+    // O garçom não pode pedir mais do que a quantidade disponível no banco
+    if (novoValor > 0 && novoValor <= itemEmFoco.estoque) {
+        qtdEmFoco = novoValor;
         document.getElementById('item-qtd').innerText = qtdEmFoco;
+    } else if (novoValor > itemEmFoco.estoque) {
+        alert(`Não é possível adicionar. O estoque atual é de apenas ${itemEmFoco.estoque} unidades.`);
     }
 }
 
 document.getElementById('btn-add-carrinho').addEventListener('click', () => {
+    // Se o estoque for 0, não deixa adicionar
+    if(itemEmFoco.estoque <= 0) {
+        return alert("Produto fora de estoque!");
+    }
+
     const obs = document.getElementById('item-obs').value;
     carrinhoAtual.push({
         id_produto: itemEmFoco.id,
@@ -128,9 +155,7 @@ function atualizarBadgeCarrinho() {
 }
 
 // --- CARRINHO E CONFIRMAÇÃO ---
-document.getElementById('btn-ver-carrinho').addEventListener('click', renderizarCarrinho);
-
-function renderizarCarrinho() {
+document.getElementById('btn-ver-carrinho').addEventListener('click', () => {
     const lista = document.getElementById('lista-carrinho');
     lista.innerHTML = '';
 
@@ -148,7 +173,7 @@ function renderizarCarrinho() {
     });
 
     mostrarTela('tela-carrinho');
-}
+});
 
 document.getElementById('btn-enviar-pedido').addEventListener('click', async () => {
     if (carrinhoAtual.length === 0) return alert('A lista está vazia!');
@@ -171,10 +196,11 @@ document.getElementById('btn-enviar-pedido').addEventListener('click', async () 
 
         if (data.sucesso) {
             alert('Pedido enviado à cozinha!');
+            await carregarProdutos(); // Atualiza o estoque localmente
             await renderizarPedidosPendentes();
             mostrarTela('tela-inicial');
         } else {
-            alert('Erro ao enviar pedido.');
+            alert('Erro ao enviar pedido: ' + (data.erro || 'Desconhecido'));
         }
     } catch (e) {
         console.error(e);
@@ -191,17 +217,17 @@ async function renderizarPedidosPendentes() {
     lista.innerHTML = '<p style="text-align:center;">Carregando pedidos...</p>';
     
     try {
-        // Puxa as ordens em aberto na tabela orders do DB_IC
         const response = await fetch(`${API_URL}/orders`);
         const pendentes = await response.json();
+        const listaDados = Array.isArray(pendentes) ? pendentes : (pendentes.results || []);
         
         lista.innerHTML = '';
-        if (pendentes.length === 0) {
+        if (listaDados.length === 0) {
             lista.innerHTML = '<p style="color:#777; text-align:center; padding: 20px 0;">Nenhum pedido pendente na cozinha.</p>';
             return;
         }
 
-        pendentes.forEach(pedido => {
+        listaDados.forEach(pedido => {
             lista.innerHTML += `
                 <li class="order-item">
                     <div class="order-header">
@@ -222,7 +248,6 @@ async function renderizarPedidosPendentes() {
     }
 }
 
-// Simula a Cozinha atualizando o status do DB_IC para 'COMPLETED'
 async function simularCozinha(idOrderDB_IC) {
     try {
         await fetch(`${API_URL}/orders/complete/${idOrderDB_IC}`, {
@@ -235,5 +260,4 @@ async function simularCozinha(idOrderDB_IC) {
     }
 }
 
-// Chamada inicial
 iniciar();
