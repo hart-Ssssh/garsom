@@ -15,7 +15,7 @@ async function iniciar() {
 // 1. PUXA NOME, FOTO E QUANTIDADE (ESTOQUE) DA API
 async function carregarProdutos() {
     try {
-        const response = await fetch(`${API_URL}/produtos`);
+        const response = await fetch(`${API_URL}/produtos/garcom`);
         if (!response.ok) throw new Error("Falha na rede: " + response.status);
         
         const data = await response.json();
@@ -72,7 +72,7 @@ document.getElementById('btn-iniciar-pedido').addEventListener('click', async ()
     mostrarTela('tela-catalogo');
 });
 
-// --- FLUXO DO CATÁLOGO (Mostrando a Quantidade) ---
+/// --- FLUXO DO CATÁLOGO (Sem mostrar a Quantidade) ---
 function renderizarCatalogo(produtos) {
     const grid = document.getElementById('grid-produtos');
     grid.innerHTML = '';
@@ -81,14 +81,13 @@ function renderizarCatalogo(produtos) {
         grid.innerHTML = '<p style="text-align:center;width:100%">Nenhum produto encontrado no banco de dados.</p>';
         return;
     }
-
+    
     produtos.forEach(prod => {
         grid.innerHTML += `
             <div class="product-card" onclick="abrirDetalhes(${prod.id})">
                 <img src="${prod.img}" alt="${prod.nome}">
                 <div class="info">
                     <h4>${prod.nome}</h4>
-                    <small style="color: #666; font-size: 0.8rem;">Em estoque: ${prod.estoque}</small>
                 </div>
             </div>
         `;
@@ -101,7 +100,8 @@ document.getElementById('busca-comida').addEventListener('input', (e) => {
     renderizarCatalogo(filtrados);
 });
 
-// --- FLUXO DETALHES DO PRODUTO (Limitando a Quantidade) ---
+
+// --- FLUXO DETALHES DO PRODUTO ---
 function abrirDetalhes(id) {
     itemEmFoco = cardapio.find(p => p.id === id);
     qtdEmFoco = 1;
@@ -114,29 +114,21 @@ function abrirDetalhes(id) {
         <img src="${itemEmFoco.img}" class="item-hero-img">
         <div class="container details-container">
             <h2>${itemEmFoco.nome}</h2>
-            <p style="color: #555; margin-bottom: 10px;">Estoque atual: ${itemEmFoco.estoque} unidades</p>
         </div>
     `;
-
     mostrarTela('tela-detalhes');
 }
 
 function alterarQtd(valor) {
     const novoValor = qtdEmFoco + valor;
-    // O garçom não pode pedir mais do que a quantidade disponível no banco
-    if (novoValor > 0 && novoValor <= itemEmFoco.estoque) {
+    // O garçom pode pedir qualquer quantidade, desde que seja maior que 0
+    if (novoValor > 0) {
         qtdEmFoco = novoValor;
         document.getElementById('item-qtd').innerText = qtdEmFoco;
-    } else if (novoValor > itemEmFoco.estoque) {
-        alert(`Não é possível adicionar. O estoque atual é de apenas ${itemEmFoco.estoque} unidades.`);
     }
 }
 
 document.getElementById('btn-add-carrinho').addEventListener('click', () => {
-    // Se o estoque for 0, não deixa adicionar
-    if(itemEmFoco.estoque <= 0) {
-        return alert("Produto fora de estoque!");
-    }
 
     const obs = document.getElementById('item-obs').value;
     carrinhoAtual.push({
